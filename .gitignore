@@ -1,0 +1,66 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Data & caches
+data/
+*.db
+*.sqlite
+*.sqlite3
+chroma/
+chroma_db/
+chroma_data/
+vector_store/
+
+# Models
+models/
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Logs
+*.log
+logs/
+
+# Uploads (user data)
+uploads/
+.cache/
+
+# Secrets
+.env
+.env.local
+secrets.yaml
+*.pem
+*.key
+
+# OS
+Thumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb

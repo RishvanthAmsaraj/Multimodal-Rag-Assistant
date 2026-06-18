@@ -1,0 +1,14 @@
+{
+  "samples": [
+    {
+      "question": "Where is the Eiffel Tower located?",
+      "reference_answer": "The Eiffel Tower is located in Paris, France.",
+      "relevant_chunk_ids": ["text:tests/data/eiffel.txt::chunk_0000"]
+    },
+    {
+      "question": "What does RAG stand for and what does it do?",
+      "reference_answer": "RAG stands for Retrieval-Augmented Generation. It augments an LLM with external knowledge retrieved from a vector store to reduce hallucinations.",
+      "relevant_chunk_ids": ["text:tests/data/ai.txt::chunk_0000"]
+    }
+  ]
+}

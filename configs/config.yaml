@@ -1,0 +1,86 @@
+# Multi-Modal RAG Assistant - Master Configuration
+# =================================================
+# All tunables for the document intelligence pipeline.
+
+app:
+  name: "multimodal-rag-assistant"
+  version: "1.0.0"
+  log_level: "INFO"
+
+paths:
+  data_dir: "./data"
+  vector_store_dir: "./data/chroma"
+  uploads_dir: "./data/uploads"
+  cache_dir: "./data/cache"
+
+ingestion:
+  pdf:
+    library: "pypdf"          # pypdf | pymupdf
+    extract_images: false
+    max_pages: 0              # 0 = all
+  image:
+    ocr_engine: "pytesseract" # pytesseract | easyocr
+    languages: ["eng"]
+    preprocess: true          # grayscale + contrast enhancement
+    min_confidence: 30
+  text:
+    encoding: "utf-8"
+    extensions: [".txt", ".md"]
+
+processing:
+  chunker:
+    strategy: "recursive"     # recursive | fixed | sentence
+    chunk_size: 512
+    chunk_overlap: 64
+    separators: ["\n\n", "\n", ". ", " ", ""]
+  embedder:
+    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    device: "cpu"             # cpu | cuda | mps
+    normalize: true
+    batch_size: 32
+    cache: true
+
+retrieval:
+  vector_store:
+    backend: "chromadb"
+    collection_name: "documents"
+    distance_metric: "cosine"
+    persist: true
+  retriever:
+    top_k: 5
+    score_threshold: 0.0      # 0 = no threshold; higher = stricter
+    rerank: false
+
+generation:
+  llm:
+    provider: "local"         # local | openai | anthropic
+    model_name: "google/flan-t5-base"   # any HF seq2seq model
+    max_new_tokens: 256
+    temperature: 0.2
+    device: "cpu"
+  prompt:
+    template: |
+      You are a helpful document assistant. Use ONLY the context below
+      to answer the question. If the answer is not in the context, say
+      "I don't have enough information in the provided documents."
+
+      Context:
+      {context}
+
+      Question: {question}
+
+      Answer:
+
+evaluation:
+  metrics:
+    - retrieval_precision_at_k
+    - retrieval_recall_at_k
+    - answer_relevance
+    - answer_faithfulness
+  test_set: "./tests/eval_dataset.json"
+
+streamlit:
+  page_title: "Multi-Modal RAG Assistant"
+  page_icon: "🧠"
+  layout: "wide"
+  theme: "light"
