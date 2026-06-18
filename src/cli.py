@@ -55,10 +55,10 @@ def cmd_ingest(pipeline: RAGPipeline, args):
     for f in args.files:
         try:
             chunks = pipeline.ingest_file(f)
-            print(f"✅ {f} → {len(chunks)} chunks")
+            print(f"[OK] {f} → {len(chunks)} chunks")
             total += len(chunks)
         except Exception as exc:
-            print(f"❌ {f}: {exc}", file=sys.stderr)
+            print(f"[ERR] {f}: {exc}", file=sys.stderr)
     print(f"\nTotal: {total} chunks indexed.")
 
 
@@ -67,10 +67,10 @@ def cmd_query(pipeline: RAGPipeline, args):
     if args.json:
         print(json.dumps(result, indent=2, default=str))
     else:
-        print(f"\n❓ {result['question']}")
-        print(f"\n💡 {result['answer']}\n")
+        print(f"\nQ: {result['question']}")
+        print(f"\nA: {result['answer']}\n")
         if result.get("sources"):
-            print(f"📚 Sources ({result['num_sources']}):")
+            print(f"Sources ({result['num_sources']}):")
             for i, s in enumerate(result["sources"], start=1):
                 src_name = Path(s["metadata"].get("source", "?")).name
                 print(f"  [{i}] {src_name} (score={s['score']:.3f})")
@@ -85,7 +85,7 @@ def cmd_reset(pipeline: RAGPipeline, args):
     confirm = input("This will wipe the vector store. Continue? [y/N] ").strip().lower()
     if confirm == "y":
         pipeline.vector_store.reset()
-        print("✅ Vector store reset.")
+        print("Vector store reset.")
     else:
         print("Cancelled.")
 

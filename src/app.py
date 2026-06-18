@@ -66,11 +66,11 @@ if "ingested_files" not in st.session_state:
 # ---------------------------------------------------------------------------
 def render_sidebar(pipeline: RAGPipeline):
     with st.sidebar:
-        st.title("🧠 RAG Assistant")
+        st.title("RAG Assistant")
         st.caption("Multi-Modal Document Intelligence")
 
         st.divider()
-        st.subheader("📊 System Stats")
+        st.subheader("System Stats")
         stats = pipeline.stats()
         st.metric("Indexed Chunks", stats["num_chunks"])
         st.metric("Embedding Dim", stats["embedding_dim"])
@@ -79,19 +79,19 @@ def render_sidebar(pipeline: RAGPipeline):
         st.text(f"LLM ({stats['llm_provider']}):\n  {stats['llm_model']}")
 
         st.divider()
-        st.subheader("⚙️ Retrieval Settings")
+        st.subheader("Retrieval Settings")
         top_k = st.slider("Top-K chunks", min_value=1, max_value=20, value=5)
         threshold = st.slider("Score threshold", min_value=0.0, max_value=1.0, value=0.0, step=0.05)
 
         st.divider()
-        st.subheader("🗂️ Ingested Files")
+        st.subheader("Ingested Files")
         if st.session_state.ingested_files:
             for f in st.session_state.ingested_files:
-                st.text(f"📄 {f}")
+                st.text(f"- {f}")
         else:
             st.caption("No files ingested yet.")
 
-        with st.expander("🧹 Danger Zone", expanded=False):
+        with st.expander("Danger Zone", expanded=False):
             if st.button("Reset Vector Store", type="secondary"):
                 pipeline.vector_store.reset()
                 st.session_state.ingested_files = []
@@ -103,7 +103,7 @@ def render_sidebar(pipeline: RAGPipeline):
 
 
 def render_uploader(pipeline: RAGPipeline):
-    st.subheader("📤 Upload Documents")
+    st.subheader("Upload Documents")
     st.caption("Supported formats: PDF · PNG · JPG · JPEG · TXT · MD")
 
     uploads = st.file_uploader(
@@ -112,7 +112,7 @@ def render_uploader(pipeline: RAGPipeline):
         accept_multiple_files=True,
     )
 
-    if uploads and st.button("🚀 Ingest Selected Files", type="primary"):
+    if uploads and st.button("Ingest Selected Files", type="primary"):
         tmp_dir = Path(tempfile.mkdtemp(prefix="rag_uploads_"))
         progress = st.progress(0.0, text="Starting…")
         try:
@@ -127,22 +127,22 @@ def render_uploader(pipeline: RAGPipeline):
                 try:
                     chunks = pipeline.ingest_file(dest)
                     st.session_state.ingested_files.append(up.name)
-                    st.success(f"✅ {up.name} → {len(chunks)} chunks")
+                    st.success(f"[OK] {up.name} → {len(chunks)} chunks")
                 except Exception as exc:  # noqa: BLE001
-                    st.error(f"❌ Failed to ingest {up.name}: {exc}")
+                    st.error(f"[ERR] Failed to ingest {up.name}: {exc}")
             progress.progress(1.0, text="Done!")
         finally:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def render_chat(pipeline: RAGPipeline, top_k: int, threshold: float):
-    st.subheader("💬 Ask Your Documents")
+    st.subheader("Ask Your Documents")
 
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             if msg["role"] == "assistant" and msg.get("sources"):
-                with st.expander(f"📚 Sources ({len(msg['sources'])})", expanded=False):
+                with st.expander(f"Sources ({len(msg['sources'])})", expanded=False):
                     for i, src in enumerate(msg["sources"], start=1):
                         st.markdown(
                             f"**[{i}] {Path(src['metadata'].get('source', '?')).name}** "
@@ -168,7 +168,7 @@ def render_chat(pipeline: RAGPipeline, top_k: int, threshold: float):
 
                 st.markdown(result["answer"])
                 if result.get("sources"):
-                    with st.expander(f"📚 Sources ({result['num_sources']})", expanded=False):
+                    with st.expander(f"Sources ({result['num_sources']})", expanded=False):
                         for i, src in enumerate(result["sources"], start=1):
                             st.markdown(
                                 f"**[{i}] {Path(src['metadata'].get('source', '?')).name}** "
@@ -186,7 +186,7 @@ def render_chat(pipeline: RAGPipeline, top_k: int, threshold: float):
 
 
 def main():
-    st.title("🧠 Multi-Modal RAG Assistant")
+    st.title("Multi-Modal RAG Assistant")
     st.caption(
         "Upload PDFs, images, or text files. Ask questions in natural language. "
         "Answers are grounded in your documents with source citations."
@@ -195,7 +195,7 @@ def main():
     pipeline = get_pipeline()
     top_k, threshold = render_sidebar(pipeline)
 
-    tab_upload, tab_chat = st.tabs(["📤 Upload", "💬 Chat"])
+    tab_upload, tab_chat = st.tabs(["Upload", "Chat"])
     with tab_upload:
         render_uploader(pipeline)
     with tab_chat:

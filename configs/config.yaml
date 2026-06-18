@@ -81,6 +81,6 @@ evaluation:
 
 streamlit:
   page_title: "Multi-Modal RAG Assistant"
-  page_icon: "🧠"
+  page_icon: ":brain:"
   layout: "wide"
   theme: "light"

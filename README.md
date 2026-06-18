@@ -1,6 +1,8 @@
-# 🧠 Multi-Modal RAG Assistant
+# Multi-Modal RAG Assistant
 
-> Production-ready Retrieval-Augmented Generation system for **PDFs, images, and text** — with OCR, smart chunking, vector search, LLM synthesis, and a polished Streamlit UI.
+Production-ready Retrieval-Augmented Generation system for PDFs, images,
+and text -- with OCR, smart chunking, vector search, LLM synthesis, and a
+Streamlit UI.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![LangChain](https://img.shields.io/badge/LangChain-ready-green)](https://python.langchain.com/)
@@ -11,97 +13,99 @@
 
 ---
 
-## ✨ Features
+## Features
 
-| Capability               | Details                                                                                |
-| ------------------------ | -------------------------------------------------------------------------------------- |
-| 📄 **PDF Ingestion**     | Page-aware text extraction via `pypdf` / `PyPDF2`                                      |
-| 🖼️ **Image OCR**         | `pytesseract` (default) with auto-grayscale + contrast preprocessing; `easyocr` fallback|
-| 📝 **Text Loading**      | UTF-8 `.txt` and `.md` files                                                           |
-| ✂️ **Smart Chunking**    | Recursive / fixed / sentence strategies with configurable overlap                      |
-| 🧬 **Embeddings**        | `sentence-transformers/all-MiniLM-L6-v2` (384-dim, CPU/CUDA/MPS)                       |
-| 🗄️ **Vector Store**      | `ChromaDB` with cosine / L2 / inner-product distance, persistent or in-memory          |
-| 🔍 **Retrieval**         | Top-k search, score-threshold filtering, optional re-ranking hook                      |
-| 🤖 **LLM Generation**    | Pluggable providers: local (HF `flan-t5`), OpenAI, Anthropic                           |
-| 📊 **Evaluation**        | Precision@k, Recall@k, MRR, answer relevance, faithfulness, context precision           |
-| 🌐 **Web UI**            | Streamlit app with upload, chat, source citations, and live stats                      |
-| 🧪 **Tests**             | `pytest` suite covering ingestion, chunking, retrieval, evaluation, end-to-end         |
+| Capability | Details |
+|------------|---------|
+| PDF Ingestion | Page-aware text extraction via pypdf / PyPDF2 |
+| Image OCR | pytesseract (default) with auto-grayscale + contrast preprocessing; easyocr fallback |
+| Text Loading | UTF-8 .txt and .md files |
+| Smart Chunking | Recursive / fixed / sentence strategies with configurable overlap |
+| Embeddings | sentence-transformers/all-MiniLM-L6-v2 (384-dim, CPU/CUDA/MPS) |
+| Vector Store | ChromaDB with cosine / L2 / inner-product distance, persistent or in-memory |
+| Retrieval | Top-k search, score-threshold filtering, optional re-ranking hook |
+| LLM Generation | Pluggable providers: local (HF flan-t5), OpenAI, Anthropic |
+| Evaluation | Precision@k, Recall@k, MRR, answer relevance, faithfulness, context precision |
+| Web UI | Streamlit app with upload, chat, source citations, and live stats |
+| Tests | pytest suite covering ingestion, chunking, retrieval, evaluation, end-to-end |
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
-                                ┌────────────────────────────────────────────┐
-                                │            STREAMLIT WEB UI               │
-                                │  (upload • chat • citations • stats)      │
-                                └────────────────┬───────────────────────────┘
-                                                 │
-                                                 ▼
-                        ┌───────────────────────────────────────────────┐
-                        │              RAGPipeline (orchestrator)       │
-                        └─────┬──────────┬──────────────┬──────────────┘
-                              │          │              │
-              ┌───────────────┘          │              └────────────────┐
-              ▼                          ▼                               ▼
-    ┌──────────────────┐      ┌──────────────────────┐       ┌─────────────────────┐
-    │   INGESTION      │      │     PROCESSING       │       │     GENERATION      │
-    │  • PDFParser     │──┐   │  • TextChunker       │  ┌───▶│  • LLMInterface     │
-    │  • ImageOCR      │  │   │    (recursive/       │  │    │    (local/OpenAI/  │
-    │  • TextLoader    │  │   │     fixed/sentence)  │  │    │     Anthropic)    │
-    └──────────────────┘  │   │  • Embedder          │  │    └─────────────────────┘
-                          │   │    (MiniLM-L6-v2)    │  │
-                          │   └──────────┬───────────┘  │
-                          │              │              │
-                          │              ▼              │
-                          │   ┌──────────────────────┐  │
-                          │   │   RETRIEVAL          │  │
-                          └──▶│  • VectorStore       │◀─┘
-                              │    (ChromaDB)        │
-                              │  • Retriever (top-k) │
-                              └──────────────────────┘
-                                          │
-                                          ▼
-                              ┌──────────────────────┐
-                              │     EVALUATION       │
-                              │  • Precision@k       │
-                              │  • Recall@k          │
-                              │  • MRR               │
-                              │  • Faithfulness      │
-                              │  • Relevance         │
-                              └──────────────────────┘
+                        +----------------------------------------+
+                        |         STREAMLIT WEB UI               |
+                        |  (upload, chat, citations, stats)      |
+                        +----------------+-----------------------+
+                                         |
+                                         v
+                    +------------------------------------------+
+                    |         RAGPipeline (orchestrator)       |
+                    +------+----------+--------------+---------+
+                           |          |              |
+           +---------------+          |              +----------------+
+           |                          |                               |
+           v                          v                               v
+ +-------------------+     +----------------------+      +---------------------+
+ |   INGESTION       |     |     PROCESSING       |      |     GENERATION      |
+ |  - PDFParser      |--|  |  - TextChunker       |  |-->|  - LLMInterface     |
+ |  - ImageOCR       |  |  |    (recursive/       |  |   |    (local/OpenAI/  |
+ |  - TextLoader     |  |  |     fixed/sentence)  |  |   |     Anthropic)      |
+ +-------------------+  |  |  - Embedder          |  |   +---------------------+
+                        |  |    (MiniLM-L6-v2)    |  |
+                        |  +----------+-----------+  |
+                        |             |              |
+                        |             v              |
+                        |  +----------------------+  |
+                        |  |   RETRIEVAL          |  |
+                        |->|  - VectorStore       |<-|
+                           |    (ChromaDB)        |
+                           |  - Retriever (top-k) |
+                           +----------+-----------+
+                                      |
+                                      v
+                           +----------------------+
+                           |     EVALUATION       |
+                           |  - Precision@k       |
+                           |  - Recall@k          |
+                           |  - MRR               |
+                           |  - Faithfulness      |
+                           |  - Relevance         |
+                           +----------------------+
 ```
 
-### Data flow
+### Data Flow
 
 ```
    file (.pdf / .png / .txt)
-        │
-        ▼
-   [ Ingestion ] ────────────────► raw document dict
-        │
-        ▼
-   [ Chunking  ] ────────────────► list[Chunk]   (text + metadata)
-        │
-        ▼
-   [ Embedding ] ────────────────► np.ndarray (n, 384)
-        │
-        ▼
-   [ ChromaDB  ] ────────────────► persisted vectors
-        │
-   ┌────┴────┐
-   │ query   │
-   └────┬────┘
-        ▼
-   [ Retriever ] ───────────────► top-k RetrievalResults
-        │
-        ▼
-   [ LLM      ] ─────────────────► grounded answer + citations
+        |
+        v
+   [ Ingestion ] --------------> raw document dict
+        |
+        v
+   [ Chunking  ] --------------> list[Chunk]   (text + metadata)
+        |
+        v
+   [ Embedding ] --------------> np.ndarray (n, 384)
+        |
+        v
+   [ ChromaDB  ] --------------> persisted vectors
+        |
+   +----+----+
+   | query   |
+   +----+----+
+        |
+        v
+   [ Retriever ] --------------> top-k RetrievalResults
+        |
+        v
+   [ LLM      ] ---------------> grounded answer + citations
 ```
 
 ---
 
-## 📦 Project Structure
+## Project Structure
 
 ```
 multimodal-rag-assistant/
@@ -110,7 +114,7 @@ multimodal-rag-assistant/
 ├── src/
 │   ├── config.py                  # config loader
 │   ├── pipeline.py                # end-to-end orchestrator
-│   ├── cli.py                     # `python -m src.cli ...`
+│   ├── cli.py                     # python -m src.cli ...
 │   ├── app.py                     # Streamlit web UI
 │   ├── ingestion/
 │   │   ├── pdf_parser.py          # PyPDF / PyMuPDF
@@ -142,9 +146,9 @@ multimodal-rag-assistant/
 
 ---
 
-## 🚀 Quickstart
+## Quickstart
 
-### 1. Clone & install
+### 1. Clone and Install
 
 ```bash
 git clone https://github.com/RishvanthAmsaraj/multimodal-rag-assistant.git
@@ -156,8 +160,10 @@ source .venv/bin/activate           # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-> 💡 **OCR note:** `pytesseract` requires the Tesseract binary on your system.
-> macOS: `brew install tesseract` · Ubuntu: `sudo apt install tesseract-ocr` · Windows: [installer](https://github.com/UB-Mannheim/tesseract/wiki)
+**OCR note:** pytesseract requires the Tesseract binary on your system.
+- macOS: `brew install tesseract`
+- Ubuntu: `sudo apt install tesseract-ocr`
+- Windows: [installer](https://github.com/UB-Mannheim/tesseract/wiki)
 
 ### 2. Run the Web UI
 
@@ -168,11 +174,11 @@ streamlit run src/app.py
 Then open http://localhost:8501 and:
 
 1. Drop a PDF / image / text file into the uploader
-2. Click **🚀 Ingest Selected Files**
-3. Switch to the **💬 Chat** tab and ask questions
+2. Click "Ingest Selected Files"
+3. Switch to the "Chat" tab and ask questions
 4. Inspect retrieved source chunks under each answer
 
-### 3. CLI usage
+### 3. CLI Usage
 
 ```bash
 # Ingest
@@ -191,7 +197,7 @@ python -m src.cli eval tests/eval_dataset.json
 python -m src.cli reset
 ```
 
-### 4. Programmatic use
+### 4. Programmatic Use
 
 ```python
 from src.config import load_config
@@ -211,34 +217,34 @@ for src in result["sources"]:
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
-Everything is driven by `configs/config.yaml` — edit and restart.
+Everything is driven by `configs/config.yaml` -- edit and restart.
 
 Key knobs:
 
-| Key                                  | Default                              | What it does                              |
-| ------------------------------------ | ------------------------------------ | ----------------------------------------- |
-| `processing.chunker.chunk_size`      | `512`                                | Max characters per chunk                  |
-| `processing.chunker.chunk_overlap`   | `64`                                 | Overlap between adjacent chunks           |
-| `processing.chunker.strategy`        | `recursive`                          | `recursive` / `fixed` / `sentence`        |
-| `processing.embedder.model_name`     | `sentence-transformers/all-MiniLM-L6-v2` | Swap in any HF sentence-transformer  |
-| `processing.embedder.device`         | `cpu`                                | `cpu` / `cuda` / `mps`                    |
-| `retrieval.vector_store.distance_metric` | `cosine`                         | `cosine` / `l2` / `ip`                    |
-| `retrieval.retriever.top_k`          | `5`                                  | Number of chunks retrieved per query      |
-| `generation.llm.provider`            | `local`                              | `local` / `openai` / `anthropic`          |
-| `generation.llm.model_name`          | `google/flan-t5-base`                | Any compatible HF / API model             |
-| `generation.llm.temperature`         | `0.2`                                | Sampling temperature                      |
+| Key | Default | Description |
+|-----|---------|-------------|
+| `processing.chunker.chunk_size` | `512` | Max characters per chunk |
+| `processing.chunker.chunk_overlap` | `64` | Overlap between adjacent chunks |
+| `processing.chunker.strategy` | `recursive` | `recursive` / `fixed` / `sentence` |
+| `processing.embedder.model_name` | `sentence-transformers/all-MiniLM-L6-v2` | Swap in any HF sentence-transformer |
+| `processing.embedder.device` | `cpu` | `cpu` / `cuda` / `mps` |
+| `retrieval.vector_store.distance_metric` | `cosine` | `cosine` / `l2` / `ip` |
+| `retrieval.retriever.top_k` | `5` | Number of chunks retrieved per query |
+| `generation.llm.provider` | `local` | `local` / `openai` / `anthropic` |
+| `generation.llm.model_name` | `google/flan-t5-base` | Any compatible HF / API model |
+| `generation.llm.temperature` | `0.2` | Sampling temperature |
 
 Environment variables override config (e.g. `LLM_PROVIDER=openai`).
 
 ---
 
-## 🔌 LLM Providers
+## LLM Providers
 
-### Local (default — no API key needed)
+### Local (default -- no API key needed)
 
-Uses HuggingFace `transformers` + a small seq2seq model
+Uses HuggingFace transformers + a small seq2seq model
 (`google/flan-t5-base`). Great for offline / privacy-sensitive
 setups. Swap in any larger seq2seq (e.g. `flan-t5-large`) by
 updating `generation.llm.model_name`.
@@ -261,18 +267,18 @@ export LLM_PROVIDER=anthropic
 
 ---
 
-## 📊 Evaluation
+## Evaluation
 
 The `src.evaluation.metrics` module ships with:
 
-| Metric                  | Range | What it measures                                             |
-| ----------------------- | ----- | ------------------------------------------------------------ |
-| `precision@k`           | 0–1   | Fraction of top-k retrieved chunks that are relevant         |
-| `recall@k`              | 0–1   | Fraction of relevant chunks retrieved in top-k               |
-| `mrr`                   | 0–1   | Mean Reciprocal Rank — rewards early relevant hits           |
-| `answer_relevance`      | 0–1   | Cosine similarity between question & answer embeddings       |
-| `answer_faithfulness`   | 0–1   | Fraction of answer sentences supported by retrieved context  |
-| `context_precision`     | 0–1   | Precision across the entire retrieved set                    |
+| Metric | Range | Description |
+|--------|-------|-------------|
+| `precision@k` | 0-1 | Fraction of top-k retrieved chunks that are relevant |
+| `recall@k` | 0-1 | Fraction of relevant chunks retrieved in top-k |
+| `mrr` | 0-1 | Mean Reciprocal Rank -- rewards early relevant hits |
+| `answer_relevance` | 0-1 | Cosine similarity between question and answer embeddings |
+| `answer_faithfulness` | 0-1 | Fraction of answer sentences supported by retrieved context |
+| `context_precision` | 0-1 | Precision across the entire retrieved set |
 
 Run the bundled eval:
 
@@ -284,10 +290,13 @@ Or programmatically:
 
 ```python
 from src.evaluation.metrics import run_evaluation
+
 samples = [
-    {"question": "What is RAG?",
-     "relevant_chunk_ids": ["chunk_0"],
-     "reference_answer": "Retrieval-augmented generation."},
+    {
+        "question": "What is RAG?",
+        "relevant_chunk_ids": ["chunk_0"],
+        "reference_answer": "Retrieval-augmented generation.",
+    },
 ]
 report = run_evaluation(pipeline, samples, k=5)
 print(report.summary())
@@ -295,7 +304,7 @@ print(report.summary())
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ```bash
 pytest tests/ -v
@@ -312,20 +321,20 @@ runs in seconds without GPU, internet, or Tesseract.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **[LangChain](https://python.langchain.com/)** — orchestration primitives
-- **[ChromaDB](https://www.trychroma.com/)** — embedded vector database
-- **[sentence-transformers](https://www.sbert.net/)** — dense embeddings
-- **[PyPDF / pypdf](https://pypdf.readthedocs.io/)** — PDF extraction
-- **[pytesseract](https://github.com/madmaze/pytesseract)** — OCR backend
-- **[Pillow](https://python-pillow.org/)** — image preprocessing
-- **[Streamlit](https://streamlit.io/)** — web UI
-- **[pytest](https://docs.pytest.org/)** — testing
+- [LangChain](https://python.langchain.com/) -- orchestration primitives
+- [ChromaDB](https://www.trychroma.com/) -- embedded vector database
+- [sentence-transformers](https://www.sbert.net/) -- dense embeddings
+- [PyPDF / pypdf](https://pypdf.readthedocs.io/) -- PDF extraction
+- [pytesseract](https://github.com/madmaze/pytesseract) -- OCR backend
+- [Pillow](https://python-pillow.org/) -- image preprocessing
+- [Streamlit](https://streamlit.io/) -- web UI
+- [pytest](https://docs.pytest.org/) -- testing
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
 - [ ] Hybrid retrieval (BM25 + dense)
 - [ ] Cross-encoder re-ranking
@@ -336,13 +345,13 @@ runs in seconds without GPU, internet, or Tesseract.
 
 ---
 
-## 📄 License
+## License
 
-MIT © 2026 Rishvanth Amsaraj
+MIT (c) 2026 Rishvanth Amsaraj
 
 ---
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 Inspired by the LangChain, ChromaDB, and sentence-transformers
 communities. Built as a portfolio / resume-ready reference
