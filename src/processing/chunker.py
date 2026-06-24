@@ -69,19 +69,21 @@ class TextChunker:
 
         if doc_type == "pdf" and document.get("pages"):
             chunks: List[Chunk] = []
+            global_idx = 0
             for page in document["pages"]:
                 page_text = page.get("text", "")
                 if not page_text.strip():
                     continue
-                chunks.extend(
-                    self._chunk_text(
-                        page_text,
-                        doc_id=doc_id,
-                        source=source,
-                        doc_type=doc_type,
-                        extra_metadata={"page": page.get("page"), **page.get("metadata", {})},
-                    )
+                page_chunks = self._chunk_text(
+                    page_text,
+                    doc_id=doc_id,
+                    source=source,
+                    doc_type=doc_type,
+                    extra_metadata={"page": page.get("page"), **page.get("metadata", {})},
+                    start_idx=global_idx,
                 )
+                global_idx += len(page_chunks)
+                chunks.extend(page_chunks)
             return chunks
 
         full_text = document.get("full_text") or document.get("text", "")
@@ -111,6 +113,7 @@ class TextChunker:
         source: str,
         doc_type: str,
         extra_metadata: Dict,
+        start_idx: int = 0,
     ) -> List[Chunk]:
         if self.strategy == "fixed":
             raw_pieces = self._fixed_chunk(text)
@@ -124,7 +127,8 @@ class TextChunker:
             piece = piece.strip()
             if not piece:
                 continue
-            chunk_id = f"{doc_id}::chunk_{idx:04d}"
+            actual_idx = start_idx + idx
+            chunk_id = f"{doc_id}::chunk_{actual_idx:04d}"
             chunks.append(
                 Chunk(
                     text=piece,
@@ -132,7 +136,7 @@ class TextChunker:
                     doc_id=doc_id,
                     source=source,
                     doc_type=doc_type,
-                    metadata={"chunk_index": idx, **extra_metadata},
+                    metadata={"chunk_index": actual_idx, **extra_metadata},
                 )
             )
         return chunks
