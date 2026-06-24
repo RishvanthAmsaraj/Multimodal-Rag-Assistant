@@ -138,8 +138,22 @@ class LLMInterface:
         logger.info("Local LLM ready")
 
     def _generate_local(self, prompt: str) -> str:
+        # T5 / Flan-T5 models expect "question: ... context: ..." prefix,
+        # not instruction-style chat prompts. Rewrite appropriately.
+        import re
+
+        # Extract the question and context from the instruction-style prompt.
+        # The default template is:
+        #   "You are...\n\nContext:\n{context}\n\nQuestion: {question}\n\nAnswer:"
+        q_match = re.search(r"Question: (.+?)(?:\n|$)", prompt)
+        c_match = re.search(r"Context:\n(.+?)(?:\n\nQuestion:|$)", prompt, re.DOTALL)
+        question = q_match.group(1).strip() if q_match else prompt
+        context = c_match.group(1).strip() if c_match else ""
+
+        t5_prompt = f"question: {question}\ncontext: {context}"
+
         out = self._pipeline(
-            prompt,
+            t5_prompt,
             do_sample=self.temperature > 0,
             temperature=max(self.temperature, 1e-5),
             num_return_sequences=1,
