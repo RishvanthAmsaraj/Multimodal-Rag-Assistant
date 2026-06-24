@@ -54,7 +54,7 @@ retrieval:
 generation:
   llm:
     provider: "local"         # local | openai | anthropic
-    model_name: "google/flan-t5-base"   # any HF seq2seq model
+    model_name: "google/flan-t5-small"   # any HF seq2seq model
     max_new_tokens: 256
     temperature: 0.2
     device: "cpu"

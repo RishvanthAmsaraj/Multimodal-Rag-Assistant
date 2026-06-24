@@ -2,7 +2,7 @@
 
 Production-ready Retrieval-Augmented Generation system for PDFs, images,
 and text -- with OCR, smart chunking, vector search, LLM synthesis, and a
-Streamlit UI.
+web UI.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![LangChain](https://img.shields.io/badge/LangChain-ready-green)](https://python.langchain.com/)
@@ -26,7 +26,7 @@ Streamlit UI.
 | Retrieval | Top-k search, score-threshold filtering, optional re-ranking hook |
 | LLM Generation | Pluggable providers: local (HF flan-t5), OpenAI, Anthropic |
 | Evaluation | Precision@k, Recall@k, MRR, answer relevance, faithfulness, context precision |
-| Web UI | Streamlit app with upload, chat, source citations, and live stats |
+| Web UI | Flask web app with drag-and-drop upload, chat, source citations, and live stats |
 | Tests | pytest suite covering ingestion, chunking, retrieval, evaluation, end-to-end |
 
 ---
@@ -115,7 +115,7 @@ multimodal-rag-assistant/
 │   ├── config.py                  # config loader
 │   ├── pipeline.py                # end-to-end orchestrator
 │   ├── cli.py                     # python -m src.cli ...
-│   ├── app.py                     # Streamlit web UI
+│   ├── app/                        # Flask web UI (server + frontend)
 │   ├── ingestion/
 │   │   ├── pdf_parser.py          # PyPDF / PyMuPDF
 │   │   ├── image_ocr.py           # pytesseract / easyocr
@@ -168,7 +168,7 @@ pip install -r requirements.txt
 ### 2. Run the Web UI
 
 ```bash
-streamlit run src/app.py
+venv/bin/python app/server.py
 ```
 
 Then open http://localhost:8501 and:

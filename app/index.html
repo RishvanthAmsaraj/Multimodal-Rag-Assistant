@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG Assistant — Multi-Modal Document Q&A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">R</div>
+        <span>RAG Assistant</span>
+      </div>
+      <div class="app-toolbar">
+        <button class="toolbar-btn" id="theme-toggle" type="button">Light</button>
+        <button class="toolbar-btn" id="clear-btn" type="button">Clear Index</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <!-- ========== SIDEBAR ========== -->
+      <aside class="sidebar-card card">
+        <div class="card-title">Upload Documents</div>
+
+        <div class="upload-zone" id="upload-zone">
+          <div class="icon">+</div>
+          <p>Drop files here or click to upload</p>
+          <p class="hint">PDF, PNG, JPG, TXT, MD supported</p>
+        </div>
+        <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.bmp,.tiff,.webp,.txt,.md" multiple style="display:none">
+
+        <div id="ingest-status" style="display:none;"></div>
+
+        <div class="card-title" style="margin-top:20px;">Indexed Sources</div>
+        <div class="source-list" id="source-list">
+          <div style="font-size:13px; color:var(--color-text-muted);">Upload a document to get started.</div>
+        </div>
+      </aside>
+
+      <!-- ========== MAIN CONTENT ========== -->
+      <section class="card">
+        <div class="card-title">Ask your documents</div>
+
+        <div class="stats-bar" id="stats-bar">
+          <span class="stat-chip">Chunks: <strong id="stat-chunks">0</strong></span>
+          <span class="stat-chip">Model: <strong id="stat-model">—</strong></span>
+          <span class="stat-chip">Top-K: <strong id="stat-topk">5</strong></span>
+        </div>
+
+        <div id="chat-error" style="display:none;"></div>
+
+        <div class="chat-container" id="chat-container">
+          <div class="empty-state" id="chat-empty">
+            <div class="icon">💬</div>
+            <p>Upload documents, then ask questions about their content.</p>
+          </div>
+        </div>
+
+        <div class="input-row">
+          <input id="question-input" type="text" placeholder="Ask a question about your documents..." disabled>
+          <button class="btn-send" id="send-btn" disabled>Ask</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <a href="https://github.com/RishvanthAmsaraj/multimodal-rag-assistant">GitHub</a> · Powered by ChromaDB + sentence-transformers
+    </footer>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
