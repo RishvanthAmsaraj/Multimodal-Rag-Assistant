@@ -53,9 +53,9 @@ retrieval:
 
 generation:
   llm:
-    provider: "local"         # local | openai | anthropic
-    model_name: "Qwen/Qwen2.5-0.5B-Instruct"   # or any HF causal / seq2seq model
-    max_new_tokens: 256
+    provider: "local"         # local | openai | anthropic | gemini
+    model_name: "gemini-flash-lite-latest"   # gemini-flash-lite-latest | gemini-flash-latest | gemini-2.5-pro
+    max_new_tokens: 1024
     temperature: 0.2
     device: "cpu"
   prompt:

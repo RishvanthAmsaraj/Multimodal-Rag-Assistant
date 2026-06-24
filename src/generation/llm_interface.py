@@ -1,10 +1,11 @@
 """LLM interface with provider abstraction.
 
-Supports three providers:
+Supports four providers:
 
 * ``local``     - HuggingFace transformers pipeline (default).
 * ``openai``    - OpenAI Chat Completions API.
 * ``anthropic`` - Anthropic Messages API.
+* ``gemini``    - Google Gemini API.
 """
 
 from __future__ import annotations
@@ -57,6 +58,8 @@ class LLMInterface:
             self._init_openai()
         elif self.provider == "anthropic":
             self._init_anthropic()
+        elif self.provider == "gemini":
+            self._init_gemini()
         else:
             raise ValueError(f"Unknown LLM provider: {provider}")
 
@@ -93,6 +96,8 @@ class LLMInterface:
             return self._generate_openai(prompt)
         if self.provider == "anthropic":
             return self._generate_anthropic(prompt)
+        if self.provider == "gemini":
+            return self._generate_gemini(prompt)
         return ""
 
     def generate_with_citations(
@@ -271,3 +276,45 @@ class LLMInterface:
             for block in resp.content
             if getattr(block, "type", "") == "text"
         ).strip()
+
+    # ------------------------------------------------------------------
+    # Gemini backend
+    # ------------------------------------------------------------------
+    def _init_gemini(self) -> None:
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            raise EnvironmentError(
+                "GEMINI_API_KEY not set. Add it to your .env file or "
+                "export it in your shell."
+            )
+        try:
+            from google import genai as _genai_mod  # noqa: F401
+        except ImportError as exc:
+            raise ImportError(
+                "google-genai not installed. "
+                "Run `pip install google-genai`."
+            ) from exc
+
+        if not self.model_name.startswith(("gemini-",)):
+            self.model_name = "gemini-flash-lite-latest"
+
+        from google import genai
+
+        self._gemini_client = genai.Client(api_key=api_key)
+        logger.info("Gemini client ready (model=%s)", self.model_name)
+
+    def _generate_gemini(self, prompt: str) -> str:
+        from google.genai import types
+
+        contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
+        generate_config = types.GenerateContentConfig(
+            max_output_tokens=self.max_new_tokens,
+            temperature=self.temperature,
+        )
+
+        resp = self._gemini_client.models.generate_content(
+            model=self.model_name,
+            contents=contents,
+            config=generate_config,
+        )
+        return (resp.text or "").strip()
