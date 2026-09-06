@@ -30,11 +30,11 @@ ingestion:
 processing:
   chunker:
     strategy: "recursive"     # recursive | fixed | sentence
-    chunk_size: 512
-    chunk_overlap: 64
+    chunk_size: 256
+    chunk_overlap: 48
     separators: ["\n\n", "\n", ". ", " ", ""]
   embedder:
-    model_name: "sentence-transformers/all-MiniLM-L6-v2"
+    model_name: "sentence-transformers/all-mpnet-base-v2"
     device: "cpu"             # cpu | cuda | mps
     normalize: true
     batch_size: 32
@@ -47,8 +47,9 @@ retrieval:
     distance_metric: "cosine"
     persist: true
   retriever:
-    top_k: 5
+    top_k: 8
     score_threshold: 0.0      # 0 = no threshold; higher = stricter
+    hybrid_weight: 0.5        # 0 = dense only; 0.5 = blend dense + keyword coverage
     rerank: false
 
 generation:
@@ -61,7 +62,10 @@ generation:
   prompt:
     template: |
       You are a helpful document assistant. Use ONLY the context below
-      to answer the question. If the answer is not in the context, say
+      to answer the question. If the context contains relevant information,
+      answer based on it even if it is partial — do not refuse to answer
+      merely because the context is a fragment. Only if the context
+      contains nothing relevant to the question, say
       "I don't have enough information in the provided documents."
 
       Context:

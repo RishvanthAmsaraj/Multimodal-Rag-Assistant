@@ -81,6 +81,38 @@ def test_retriever_score_threshold_filters(tmp_vector_dir, fake_embedder):
     assert isinstance(results, list)
 
 
+def test_hybrid_retrieval_surfaces_keyword_match(tmp_vector_dir, fake_embedder):
+    """Hybrid scoring must surface a chunk whose exact terms match the query
+    even when it ranks poorly on dense cosine alone."""
+    store = VectorStore(
+        collection_name="test",
+        persist_directory=tmp_vector_dir,
+        persist=False,
+    )
+    retriever = Retriever(
+        embedder=fake_embedder, vector_store=store, top_k=2, hybrid_weight=0.6
+    )
+    chunks = _make_chunks(
+        [
+            "EXPERIENCE — Undergraduate Research Assistant at a neuroscience lab.",
+            "SKILLS — Python, SQL, Docker.",
+            "EDUCATION — B.S. in computer science.",
+        ]
+    )
+    retriever.index_chunks(chunks)
+
+    results = retriever.retrieve("What work experience does Rishvanth have?")
+    assert len(results) == 2
+    # Keyword coverage (experience) must outweigh any dense-embedding noise.
+    assert results[0].text.startswith("EXPERIENCE")
+
+
+def test_lexical_score_stopword_filtering():
+    assert Retriever._lexical_score("what work experience", "my work experience matters") == 1.0
+    assert Retriever._lexical_score("what work experience", "python and sql skills") == 0.0
+    assert Retriever._lexical_score("what work experience", "my work history") == 0.5
+
+
 def test_retriever_with_scores_metadata(tmp_vector_dir, fake_embedder):
     store = VectorStore(
         collection_name="test",

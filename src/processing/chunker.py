@@ -19,6 +19,13 @@ from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
+# Section-header heuristic: a short standalone line in ALL CAPS, e.g.
+# "EXPERIENCE", "WORK HISTORY", "SKILLS & TOOLS". Structured documents
+# (resumes, reports) get split at these boundaries so a section header
+# always starts a chunk instead of being buried mid-chunk — buried headers
+# don't influence the embedding and make retrieval miss whole sections.
+SECTION_HEADER_RE = re.compile(r"^\s*[A-Z][A-Z0-9 &/()\-—–:'’]{1,44}\s*$")
+
 
 @dataclass
 class Chunk:
@@ -115,12 +122,18 @@ class TextChunker:
         extra_metadata: Dict,
         start_idx: int = 0,
     ) -> List[Chunk]:
-        if self.strategy == "fixed":
-            raw_pieces = self._fixed_chunk(text)
-        elif self.strategy == "sentence":
-            raw_pieces = self._sentence_chunk(text)
-        else:
-            raw_pieces = self._recursive_chunk(text)
+        # Pre-pass: split on section-header lines first (structured docs).
+        # Each header starts its own section; bridges never cross sections.
+        sections = self._split_sections(text)
+
+        raw_pieces: List[str] = []
+        for section in sections:
+            if self.strategy == "fixed":
+                raw_pieces.extend(self._fixed_chunk(section))
+            elif self.strategy == "sentence":
+                raw_pieces.extend(self._sentence_chunk(section))
+            else:
+                raw_pieces.extend(self._recursive_chunk(section))
 
         chunks: List[Chunk] = []
         for idx, piece in enumerate(raw_pieces):
@@ -140,6 +153,27 @@ class TextChunker:
                 )
             )
         return chunks
+
+    @staticmethod
+    def _split_sections(text: str) -> List[str]:
+        """Split text at all-caps section-header lines (header starts the
+        following section). Returns the original text unchanged when no
+        headers are found."""
+        lines = text.split("\n")
+        sections: List[str] = []
+        current: List[str] = []
+        for line in lines:
+            stripped = line.strip()
+            if stripped and SECTION_HEADER_RE.match(stripped):
+                # A new section begins here.
+                if current:
+                    sections.append("\n".join(current))
+                current = [line]
+            else:
+                current.append(line)
+        if current:
+            sections.append("\n".join(current))
+        return sections if len(sections) > 1 else [text]
 
     def _fixed_chunk(self, text: str) -> List[str]:
         step = self.chunk_size - self.chunk_overlap
@@ -169,8 +203,25 @@ class TextChunker:
 
     def _recursive_chunk(self, text: str) -> List[str]:
         """Recursive splitter — tries separators in order, falling back to
-        character-level slicing for the un-splittable tail."""
-        return self._recursive_split(text, self.separators)
+        character-level slicing for the un-splittable tail.
+
+        Overlap is applied ONCE here at the top level, after the full split.
+        Applying it inside the recursion snowballed: every recursion level
+        prepended another tail, inflating chunks and breaking boundaries.
+        """
+        chunks = self._recursive_split(text, self.separators)
+
+        # Bridge chunk boundaries: prepend the previous chunk's tail so context
+        # carries across splits. All content is preserved — every character of
+        # the original text survives (the old merge-based version silently
+        # collapsed multi-chunk documents down to their final chunk).
+        if self.chunk_overlap > 0 and len(chunks) > 1:
+            bridged: List[str] = [chunks[0]]
+            for i in range(1, len(chunks)):
+                tail = chunks[i - 1][-self.chunk_overlap:]
+                bridged.append(tail + chunks[i])
+            return bridged
+        return chunks
 
     def _recursive_split(self, text: str, separators: List[str]) -> List[str]:
         if len(text) <= self.chunk_size:
@@ -201,20 +252,5 @@ class TextChunker:
 
         if buf:
             chunks.append(buf)
-
-        # Apply overlap by sliding a tail from the previous chunk into the next.
-        if self.chunk_overlap > 0 and len(chunks) > 1:
-            overlapped: List[str] = []
-            for i, c in enumerate(chunks):
-                if i == 0:
-                    overlapped.append(c)
-                    continue
-                tail = overlapped[-1][-self.chunk_overlap :]
-                merged = (tail + c)
-                if len(merged) <= self.chunk_size * 1.5:  # allow mild overshoot
-                    overlapped[-1] = merged
-                else:
-                    overlapped.append(c)
-            chunks = overlapped
 
         return chunks

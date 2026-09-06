@@ -74,6 +74,7 @@ class RAGPipeline:
             vector_store=self.vector_store,
             top_k=int(cfg.retrieval.retriever.top_k),
             score_threshold=float(cfg.retrieval.retriever.score_threshold),
+            hybrid_weight=float(getattr(cfg.retrieval.retriever, "hybrid_weight", 0.0)),
         )
 
         # Generation
