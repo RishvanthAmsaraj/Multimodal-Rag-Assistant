@@ -71,11 +71,11 @@ async function loadSources() {
     const data = await res.json();
     const list = document.getElementById('source-list');
     if (!data.success || !data.sources.length) {
-      list.innerHTML = '<div style="font-size:13px;color:var(--color-text-muted);">No documents indexed yet.</div>';
+      list.innerHTML = '<div class="source-empty">No documents indexed yet.</div>';
       return;
     }
     list.innerHTML = data.sources.map(s => {
-      const icon = pdfIcons[s.type] || '📄';
+      const icon = pdfIcons[s.type] || 'DOC';
       return `<div class="source-item">
         <div class="source-icon">${icon}</div>
         <span class="source-name">${escapeHtml(s.name)}</span>
@@ -98,6 +98,17 @@ const pdfIcons = {
   '.txt': 'TXT',
   '.md': 'MD',
 };
+
+const EMPTY_STATE_HTML =
+  '<div class="empty-state" id="chat-empty">' +
+  '<div class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none">' +
+  '<path d="M7 3.5h7.5L19 8v9.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+  '<path d="M14.5 3.5V8H19" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+  '<path d="M9 14.5h6M9 17h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' +
+  '</svg></div>' +
+  '<p class="empty-title">Your documents, ready for questions</p>' +
+  '<p>Add files to the library, then ask anything about their content.</p>' +
+  '</div>';
 
 // ===== Stats =====
 async function loadStats() {
@@ -160,14 +171,15 @@ async function sendQuestion() {
     let answer = data.answer || 'No answer generated.';
     if (data.sources && data.sources.length > 0) {
       answer += '<div class="source-citation">';
-      answer += `<details><summary>${data.num_sources} source(s)</summary>`;
+      answer += `<details><summary>${data.num_sources} cited source(s)</summary>`;
       data.sources.forEach(s => {
         const score = typeof s.score === 'number' ? s.score.toFixed(3) : 'N/A';
-        answer += `<div style="margin-top:8px;">
+        const pct = typeof s.score === 'number' ? Math.min(100, Math.max(0, Math.round(s.score * 100))) : 0;
+        answer += `<div class="source-block">
           <div class="source-text">${escapeHtml(s.text)}</div>
           <div class="source-meta">
-            <span>Score: ${score}</span>
-            <span>Chunk: ${escapeHtml(s.chunk_id || '—')}</span>
+            <span class="score-chip"><span class="score-meter"><span class="score-fill" style="width:${pct}%;"></span></span>${score}</span>
+            <span>chunk ${escapeHtml(s.chunk_id || '—')}</span>
           </div>
         </div>`;
       });
@@ -220,7 +232,7 @@ document.getElementById('clear-btn').addEventListener('click', async () => {
     const res = await fetch('/api/clear', { method: 'POST' });
     const data = await res.json();
     if (data.success) {
-      chatContainer.innerHTML = '<div class="empty-state" id="chat-empty"><div class="icon">💬</div><p>Upload documents, then ask questions about their content.</p></div>';
+      chatContainer.innerHTML = EMPTY_STATE_HTML;
       document.getElementById('question-input').disabled = true;
       document.getElementById('send-btn').disabled = true;
       await Promise.all([loadSources(), loadStats()]);

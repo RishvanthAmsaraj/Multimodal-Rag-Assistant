@@ -6,70 +6,88 @@
   <title>RAG Assistant — Multi-Modal Document Q&A</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="app-header">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">R</div>
-        <span>RAG Assistant</span>
+        <svg class="brand-mark" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+          <path d="M4 2.5h7l5 5v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M11 2.5v4.5h4.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M6 11h8M6 13.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span class="brand-name">RAG Assistant</span>
       </div>
       <div class="app-toolbar">
         <button class="toolbar-btn" id="theme-toggle" type="button">Light</button>
-        <button class="toolbar-btn" id="clear-btn" type="button">Clear Index</button>
+        <button class="toolbar-btn danger" id="clear-btn" type="button">Clear Index</button>
       </div>
     </header>
 
     <main class="app-main">
-      <!-- ========== SIDEBAR ========== -->
+      <!-- ========== SIDEBAR: document library ========== -->
       <aside class="sidebar-card card">
-        <div class="card-title">Upload Documents</div>
+        <div class="card-title">Add to Library</div>
 
         <div class="upload-zone" id="upload-zone">
-          <div class="icon">+</div>
-          <p>Drop files here or click to upload</p>
-          <p class="hint">PDF, PNG, JPG, TXT, MD supported</p>
+          <div class="icon" aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none">
+              <path d="M10 12.5v-7M7.5 8 10 5.5 12.5 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4 11.5v3.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <p>Drop files here or click to browse</p>
+          <p class="hint">PDF · PNG · JPG · TXT · MD</p>
         </div>
         <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.bmp,.tiff,.webp,.txt,.md" multiple style="display:none">
 
         <div id="ingest-status" style="display:none;"></div>
 
-        <div class="card-title" style="margin-top:20px;">Indexed Sources</div>
+        <div class="card-title" style="margin-top:22px;">Indexed Sources</div>
         <div class="source-list" id="source-list">
-          <div style="font-size:13px; color:var(--color-text-muted);">Upload a document to get started.</div>
+          <div class="source-empty">Upload a document to get started.</div>
         </div>
       </aside>
 
-      <!-- ========== MAIN CONTENT ========== -->
+      <!-- ========== MAIN CONTENT: research console ========== -->
       <section class="card">
-        <div class="card-title">Ask your documents</div>
+        <div class="card-title">Ask Your Documents</div>
 
         <div class="stats-bar" id="stats-bar">
-          <span class="stat-chip">Chunks: <strong id="stat-chunks">0</strong></span>
-          <span class="stat-chip">Model: <strong id="stat-model">—</strong></span>
-          <span class="stat-chip">Top-K: <strong id="stat-topk">5</strong></span>
+          <span class="stat-chip">Chunks <strong id="stat-chunks">0</strong></span>
+          <span class="stat-chip">Model <strong id="stat-model">—</strong></span>
+          <span class="stat-chip">Top-K <strong id="stat-topk">5</strong></span>
         </div>
 
         <div id="chat-error" style="display:none;"></div>
 
         <div class="chat-container" id="chat-container">
           <div class="empty-state" id="chat-empty">
-            <div class="icon">💬</div>
-            <p>Upload documents, then ask questions about their content.</p>
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 3.5h7.5L19 8v9.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                <path d="M14.5 3.5V8H19" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+                <path d="M9 14.5h6M9 17h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <p class="empty-title">Your documents, ready for questions</p>
+            <p>Add files to the library, then ask anything about their content.</p>
           </div>
         </div>
 
         <div class="input-row">
-          <input id="question-input" type="text" placeholder="Ask a question about your documents..." disabled>
+          <input id="question-input" type="text" placeholder="Ask a question about your documents…" disabled>
           <button class="btn-send" id="send-btn" disabled>Ask</button>
         </div>
       </section>
     </main>
 
     <footer class="app-footer">
-      <a href="https://github.com/RishvanthAmsaraj/multimodal-rag-assistant">GitHub</a> · Powered by ChromaDB + sentence-transformers
+      <a href="https://github.com/RishvanthAmsaraj/multimodal-rag-assistant">GitHub</a>
+      <span class="sep">·</span>
+      <span>Powered by ChromaDB + sentence-transformers</span>
     </footer>
   </div>
 
