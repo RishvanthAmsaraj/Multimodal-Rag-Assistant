@@ -142,11 +142,16 @@ const questionInput = document.getElementById('question-input');
 const sendBtn = document.getElementById('send-btn');
 const emptyState = document.getElementById('chat-empty');
 
+const AVATARS = {
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8" r="3.6"/><path d="M5.6 19.4a6.5 6.5 0 0 1 12.8 0"/></svg>',
+  assistant: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M12 2.6l2.1 6.3 6.3 2.1-6.3 2.1L12 19.4l-2.1-6.3-6.3-2.1 6.3-2.1L12 2.6z"/></svg>',
+};
+
 async function sendQuestion() {
   const question = questionInput.value.trim();
   if (!question) return;
 
-  addMessage('user', question);
+  addMessage('user', escapeHtml(question));
   questionInput.value = '';
   sendBtn.disabled = true;
   questionInput.disabled = true;
@@ -168,7 +173,7 @@ async function sendQuestion() {
       return;
     }
 
-    let answer = data.answer || 'No answer generated.';
+    let answer = renderMarkdown(data.answer || 'No answer generated.');
     if (data.sources && data.sources.length > 0) {
       answer += '<div class="source-citation">';
       answer += `<details><summary>${data.num_sources} cited source(s)</summary>`;
@@ -200,7 +205,7 @@ function addMessage(role, html) {
   emptyState.style.display = 'none';
   const div = document.createElement('div');
   div.className = `chat-message ${role}`;
-  div.innerHTML = `<div class="avatar">${role === 'user' ? 'U' : 'R'}</div>
+  div.innerHTML = `<div class="avatar">${AVATARS[role] || ''}</div>
     <div class="bubble">${html}</div>`;
   chatContainer.appendChild(div);
   chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -210,7 +215,7 @@ function showLoadingIndicator() {
   const div = document.createElement('div');
   div.className = 'chat-message assistant';
   div.id = 'loading-indicator';
-  div.innerHTML = `<div class="avatar">R</div><div class="bubble"><div class="loading-container"><div class="spinner"></div></div></div>`;
+  div.innerHTML = `<div class="avatar">${AVATARS.assistant}</div><div class="bubble"><div class="loading-container"><div class="spinner"></div></div></div>`;
   chatContainer.appendChild(div);
   chatContainer.scrollTop = chatContainer.scrollHeight;
 }
@@ -218,6 +223,67 @@ function showLoadingIndicator() {
 function removeLoadingIndicator() {
   const el = document.getElementById('loading-indicator');
   if (el) el.remove();
+}
+
+/**
+ * Tiny markdown renderer (safe: escapes first, then transforms).
+ * Supports: **bold**, *italic*, `code`, fenced code blocks, # headings,
+ * - / * bullet lists, 1. numbered lists, paragraphs.
+ */
+function renderMarkdown(text) {
+  let h = escapeHtml(text);
+
+  // Fenced code blocks first (before inline rules touch them)
+  h = h.replace(/```([\s\S]*?)```/g, (_m, c) => `<pre><code>${c.trim()}</code></pre>`);
+
+  // Headings
+  h = h.replace(/^#{1,3}\s+(.*)$/gm, (_m, t) => `<h3>${t}</h3>`);
+
+  // Block-level: walk lines, group bullet/numbered lists
+  const lines = h.split('\n');
+  const out = [];
+  let list = null;
+  const closeList = () => { if (list) { out.push(`</${list}>`); list = null; } };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { closeList(); out.push(''); continue; }
+    const ul = line.match(/^[-*•]\s+(.*)$/);
+    const ol = line.match(/^\d+[.)]\s+(.*)$/);
+    if (ul) {
+      if (list !== 'ul') { closeList(); out.push('<ul>'); list = 'ul'; }
+      out.push(`<li>${ul[1]}</li>`);
+      continue;
+    }
+    if (ol) {
+      if (list !== 'ol') { closeList(); out.push('<ol>'); list = 'ol'; }
+      out.push(`<li>${ol[1]}</li>`);
+      continue;
+    }
+    closeList();
+    out.push(line);
+  }
+  closeList();
+  h = out.join('\n');
+
+  // Inline: bold, italic, inline code
+  h = h.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  h = h.replace(/(^|[\s(])\*([^*\n]+)\*(?!\*)/g, '$1<i>$2</i>');
+  h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+  // Wrap remaining text runs in paragraphs, keep block tags intact
+  const parts = h.split('\n');
+  const wrapped = [];
+  let para = [];
+  const flush = () => {
+    if (para.length) { wrapped.push(`<p>${para.join('<br>')}</p>`); para = []; }
+  };
+  for (const p of parts) {
+    if (/^<(ul|ol|pre|h\d|p|li)(\s|>)/.test(p)) { flush(); wrapped.push(p); }
+    else if (p === '') { flush(); }
+    else para.push(p);
+  }
+  flush();
+  return wrapped.join('\n');
 }
 
 sendBtn.addEventListener('click', sendQuestion);

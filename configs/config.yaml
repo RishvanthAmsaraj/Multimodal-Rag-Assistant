@@ -54,8 +54,8 @@ retrieval:
 
 generation:
   llm:
-    provider: "local"         # local | openai | anthropic | gemini
-    model_name: "gemini-flash-lite-latest"   # gemini-flash-lite-latest | gemini-flash-latest | gemini-2.5-pro
+    provider: "local"         # local | openai | anthropic | gemini (env LLM_PROVIDER overrides)
+    model_name: "gemini-2.5-flash"   # gemini-2.5-flash | gemini-flash-latest | gemini-2.5-pro
     max_new_tokens: 1024
     temperature: 0.2
     device: "cpu"
