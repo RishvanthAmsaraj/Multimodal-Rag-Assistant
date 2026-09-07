@@ -47,7 +47,7 @@ retrieval:
     distance_metric: "cosine"
     persist: true
   retriever:
-    top_k: 8
+    top_k: 10
     score_threshold: 0.0      # 0 = no threshold; higher = stricter
     hybrid_weight: 0.5        # 0 = dense only; 0.5 = blend dense + keyword coverage
     rerank: false

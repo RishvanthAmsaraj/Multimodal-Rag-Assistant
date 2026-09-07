@@ -79,8 +79,10 @@ class Retriever:
         k = top_k or self.top_k
         query_vec = self.embedder.embed_query(query)
         # With hybrid scoring, over-fetch dense candidates so keyword matches
-        # that rank outside the dense top-k can still surface.
-        fetch_k = max(k, min(k * 4, 64)) if self.hybrid_weight > 0 else k
+        # that rank outside the dense top-k can still surface. The extra
+        # headroom also lets us drop duplicate chunks below without losing
+        # coverage of the requested k.
+        fetch_k = max(k, min(k * 4, 64)) if self.hybrid_weight > 0 else k * 2
         results = self.vector_store.query(query_vec, top_k=fetch_k)
 
         if self.hybrid_weight > 0:
@@ -90,7 +92,21 @@ class Retriever:
                     + self.hybrid_weight * self._lexical_score(query, r.text)
                 )
             results.sort(key=lambda r: r.score, reverse=True)
-            results = results[:k]
+
+        # Deduplicate identical chunks (re-ingested documents double up):
+        # keep the first occurrence of each unique text so one duplicate
+        # set can't crowd real content out of the window.
+        seen: set[str] = set()
+        unique: List[RetrievalResult] = []
+        for r in results:
+            norm = " ".join(r.text.split()).strip().lower()
+            if norm in seen:
+                continue
+            seen.add(norm)
+            unique.append(r)
+            if len(unique) >= k:
+                break
+        results = unique
 
         if self.score_threshold > 0:
             results = [r for r in results if r.score >= self.score_threshold]

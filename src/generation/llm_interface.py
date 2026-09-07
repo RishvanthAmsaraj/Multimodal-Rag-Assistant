@@ -305,6 +305,7 @@ class LLMInterface:
 
     def _generate_gemini(self, prompt: str) -> str:
         from google.genai import types
+        import time as _time
 
         contents = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
         generate_config = types.GenerateContentConfig(
@@ -312,9 +313,23 @@ class LLMInterface:
             temperature=self.temperature,
         )
 
-        resp = self._gemini_client.models.generate_content(
-            model=self.model_name,
-            contents=contents,
-            config=generate_config,
-        )
-        return (resp.text or "").strip()
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                resp = self._gemini_client.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=generate_config,
+                )
+                return (resp.text or "").strip()
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                code = getattr(exc, "code", None)
+                status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+                # Retry on rate limits / transient server errors only.
+                if status in (429, 500, 502, 503, 504) and attempt < 2:
+                    logger.warning("Gemini transient error (%s) — retry %d/2", status, attempt + 1)
+                    _time.sleep(min(2 ** (attempt + 1), 6))
+                    continue
+                raise
+        raise last_exc if last_exc else RuntimeError("Gemini generation failed")

@@ -132,13 +132,33 @@ class RAGPipeline:
     # ------------------------------------------------------------------
     # Query
     # ------------------------------------------------------------------
+    # Phrases that indicate the first-pass answer came up empty.
+    _REFUSAL_HINTS = (
+        "don't have enough information",
+        "do not have enough information",
+        "not enough information",
+        "i don't know",
+        "i do not know",
+        "not mentioned",
+        "no information",
+        "cannot answer",
+        "can't answer",
+    )
+
     def query(
         self,
         question: str,
         top_k: Optional[int] = None,
         return_sources: bool = True,
     ) -> Dict:
-        """Run a full RAG query: retrieve → generate."""
+        """Run a full RAG query: retrieve → generate.
+
+        Two-pass retrieval: if the first answer is a refusal, the
+        retriever re-runs with a much wider window (up to 24 chunks) and
+        the generator is asked to aggregate across them — this recovers
+        multi-chunk questions (counts, lists, "all my roles") that a
+        narrow top-k window misses.
+        """
         results = self.retriever.retrieve(question, top_k=top_k)
         if not results:
             return {
@@ -151,6 +171,28 @@ class RAGPipeline:
             question=question,
             context_chunks=[r.text for r in results],
         )
+
+        # Second pass: widen the window when the first answer refused.
+        if self._is_refusal(answer):
+            wide_k = min(24, int((top_k or self.retriever.top_k) * 3))
+            wide_results = self.retriever.retrieve(question, top_k=wide_k)
+            wide_texts = [r.text for r in wide_results]
+            if len(wide_texts) > len(results):
+                aggregation_question = (
+                    f"{question}\n\n"
+                    "Scan ALL provided context chunks and combine anything "
+                    "relevant from them before answering. Prefer a specific "
+                    "answer built from the combined context; only if the "
+                    "context truly contains nothing relevant, say you don't "
+                    "have enough information."
+                )
+                wide_answer = self.llm.generate(
+                    question=aggregation_question,
+                    context_chunks=wide_texts,
+                )
+                if not self._is_refusal(wide_answer):
+                    answer = wide_answer
+                    results = wide_results
 
         sources: List[Dict] = []
         if return_sources:
@@ -169,6 +211,10 @@ class RAGPipeline:
             "sources": sources,
             "num_sources": len(sources),
         }
+
+    def _is_refusal(self, answer: str) -> bool:
+        lowered = (answer or "").lower()
+        return any(h in lowered for h in self._REFUSAL_HINTS)
 
     # ------------------------------------------------------------------
     # Stats
